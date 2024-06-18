@@ -1,0 +1,61 @@
+---
+- name: Update and upgrade Ubuntu packages
+  hosts: all
+  become: true
+  become_user: root
+
+  tasks:
+    - name: Check whoami
+      command: whoami
+      register: whoami_output
+
+    - name: Debug whoami output
+      debug:
+        var: whoami_output
+
+    - name: Check sudo permissions
+      command: sudo -l
+      register: sudo_permissions
+
+    - name: Debug sudo permissions
+      debug:
+        var: sudo_permissions
+
+    - name: Clear apt locks if they exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/apt/lists/lock
+      ignore_errors: yes
+
+    - name: Debug apt lock removal
+      shell: ls -l /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend
+      ignore_errors: yes
+      register: lock_files
+      failed_when: false
+
+    - name: Show lock files
+      debug:
+        var: lock_files
+
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+
+    - name: Upgrade all packages to the latest version
+      apt:
+        upgrade: yes
+        autoremove: yes
+        autoclean: yes
+        force_apt_get: yes
+        allow_unauthenticated: yes
+      register: apt_upgrade_result
+      failed_when: apt_upgrade_result.failed
+      changed_when: apt_upgrade_result.changed
+
+    - name: Reboot if packages were upgraded
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+        connect_timeout: 30
+      when: apt_upgrade_result.changed
