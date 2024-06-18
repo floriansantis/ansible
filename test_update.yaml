@@ -21,24 +21,6 @@
       debug:
         var: sudo_permissions
 
-    - name: Clear apt locks if they exist
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /var/lib/apt/lists/lock
-      ignore_errors: yes
-
-    - name: Debug apt lock removal
-      shell: ls -l /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend
-      ignore_errors: yes
-      register: lock_files
-      failed_when: false
-
-    - name: Show lock files
-      debug:
-        var: lock_files
-
     - name: Update apt package cache
       apt:
         update_cache: yes
